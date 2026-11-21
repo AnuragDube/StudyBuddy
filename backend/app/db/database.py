@@ -15,12 +15,27 @@ class Base(DeclarativeBase):
     """Declarative base for all ORM models."""
 
 
+def normalize_database_url(database_url: str) -> str:
+    """Normalize cloud PostgreSQL URLs (Neon/Supabase) to use the psycopg v3 driver."""
+    url = database_url.strip()
+    if url.startswith("postgres://"):
+        return "postgresql+psycopg://" + url[len("postgres://"):]
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg://" + url[len("postgresql://"):]
+    return url
+
+
 def build_engine(database_url: str, **kwargs) -> Engine:
-    """Create an engine; SQLite gets thread-safety + foreign-key enforcement."""
+    """Create an engine; SQLite gets FK enforcement, Postgres gets pool_pre_ping."""
+    url = normalize_database_url(database_url)
     connect_args = kwargs.pop("connect_args", {})
-    if database_url.startswith("sqlite"):
+    if url.startswith("sqlite"):
         connect_args.setdefault("check_same_thread", False)
-    engine = create_engine(database_url, connect_args=connect_args, future=True, **kwargs)
+    else:
+        kwargs.setdefault("pool_pre_ping", True)
+        kwargs.setdefault("pool_recycle", 300)
+
+    engine = create_engine(url, connect_args=connect_args, future=True, **kwargs)
 
     if engine.dialect.name == "sqlite":
 

@@ -13,7 +13,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import get_settings
 from app.db import models  # noqa: F401  (register models on Base.metadata)
-from app.db.database import Base
+from app.db.database import Base, normalize_database_url
 
 config = context.config
 
@@ -22,9 +22,13 @@ if config.config_file_name is not None and config.attributes.get("configure_logg
 
 url_override = context.get_x_argument(as_dictionary=True).get("url")
 if url_override:
-    config.set_main_option("sqlalchemy.url", url_override)
+    config.set_main_option("sqlalchemy.url", normalize_database_url(url_override))
 elif not config.get_main_option("sqlalchemy.url"):
-    config.set_main_option("sqlalchemy.url", get_settings().database_url)
+    config.set_main_option("sqlalchemy.url", normalize_database_url(get_settings().database_url))
+else:
+    config.set_main_option(
+        "sqlalchemy.url", normalize_database_url(config.get_main_option("sqlalchemy.url") or "")
+    )
 
 target_metadata = Base.metadata
 
