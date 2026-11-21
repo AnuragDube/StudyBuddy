@@ -37,18 +37,25 @@ SUBJECT_PALETTE = [
 
 
 # ---------------------------------------------------------------- Settings
-def get_or_create_settings(db: Session) -> UserSettings:
-    settings = db.scalar(select(UserSettings).order_by(UserSettings.id).limit(1))
+def get_or_create_settings(db: Session, user_id: int | None = None) -> UserSettings:
+    stmt = select(UserSettings)
+    if user_id is not None:
+        stmt = stmt.where(UserSettings.user_id == user_id)
+    else:
+        stmt = stmt.where(UserSettings.user_id.is_(None))
+    settings = db.scalar(stmt.order_by(UserSettings.id).limit(1))
     if settings is None:
-        settings = UserSettings()
+        settings = UserSettings(user_id=user_id)
         db.add(settings)
         db.commit()
         db.refresh(settings)
     return settings
 
 
-def update_settings(db: Session, payload: SettingsUpdate) -> UserSettings:
-    settings = get_or_create_settings(db)
+def update_settings(
+    db: Session, payload: SettingsUpdate, user_id: int | None = None
+) -> UserSettings:
+    settings = get_or_create_settings(db, user_id=user_id)
     for field, value in payload.model_dump(exclude_unset=True, exclude_none=True).items():
         setattr(settings, field, value)
     db.commit()
@@ -107,22 +114,34 @@ def _plan_query():
     return select(StudyPlan).options(selectinload(StudyPlan.topics).selectinload(Topic.sessions))
 
 
-def list_plans(db: Session, status_filter: PlanStatus | None = None) -> list[StudyPlan]:
+def list_plans(
+    db: Session,
+    status_filter: PlanStatus | None = None,
+    user_id: int | None = None,
+) -> list[StudyPlan]:
     query = _plan_query().order_by(StudyPlan.exam_date, StudyPlan.id)
+    if user_id is not None:
+        query = query.where(StudyPlan.user_id == user_id)
     if status_filter is not None:
         query = query.where(StudyPlan.status == status_filter)
     return list(db.scalars(query).unique())
 
 
-def get_plan_or_404(db: Session, plan_id: int) -> StudyPlan:
-    plan = db.scalar(_plan_query().where(StudyPlan.id == plan_id))
+def get_plan_or_404(db: Session, plan_id: int, user_id: int | None = None) -> StudyPlan:
+    query = _plan_query().where(StudyPlan.id == plan_id)
+    if user_id is not None:
+        query = query.where(StudyPlan.user_id == user_id)
+    plan = db.scalar(query)
     if plan is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Study plan {plan_id} not found.")
     return plan
 
 
-def _next_color(db: Session) -> str:
-    count = db.query(StudyPlan).count()
+def _next_color(db: Session, user_id: int | None = None) -> str:
+    query = db.query(StudyPlan)
+    if user_id is not None:
+        query = query.filter(StudyPlan.user_id == user_id)
+    count = query.count()
     return SUBJECT_PALETTE[count % len(SUBJECT_PALETTE)]
 
 
@@ -130,19 +149,22 @@ def _new_topic(plan_id: int, data: TopicCreate, order_index: int) -> Topic:
     return Topic(plan_id=plan_id, order_index=order_index, **data.model_dump())
 
 
-def create_plan(db: Session, payload: PlanCreate) -> StudyPlan:
+def create_plan(
+    db: Session, payload: PlanCreate, user_id: int | None = None
+) -> StudyPlan:
     plan = StudyPlan(
+        user_id=user_id,
         subject_name=payload.subject_name,
         exam_date=payload.exam_date,
         syllabus_raw_text=payload.syllabus_raw_text,
-        color=payload.color or _next_color(db),
+        color=payload.color or _next_color(db, user_id=user_id),
     )
     db.add(plan)
     db.flush()
     for i, topic in enumerate(payload.topics):
         db.add(_new_topic(plan.id, topic, i))
     db.commit()
-    return get_plan_or_404(db, plan.id)
+    return get_plan_or_404(db, plan.id, user_id=user_id)
 
 
 def update_plan(db: Session, plan: StudyPlan, payload: PlanUpdate) -> StudyPlan:

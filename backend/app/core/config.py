@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     # --- Uploads ---
     max_upload_mb: int = 10
 
+    # --- Auth ---
+    jwt_secret: str = "study-buddy-dev-secret-change-in-production"
+    jwt_expire_minutes: int = 60 * 24 * 7
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_origins(cls, value: object) -> object:

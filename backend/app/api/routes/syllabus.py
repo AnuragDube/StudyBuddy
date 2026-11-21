@@ -6,8 +6,10 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
+from app.core.security import get_current_user
 from app.db import crud
 from app.db.database import get_db
+from app.db.models import User
 from app.schemas.plan import PlanDetail, TopicCreate
 from app.schemas.schedule import SyllabusExtractResponse
 from app.services.ai_service import (
@@ -123,10 +125,11 @@ async def extract_syllabus_for_plan_endpoint(
     file: UploadFile | None = File(None),
     raw_text: str | None = Form(None),
     provider: ProviderName | None = Form(None),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> PlanDetail:
-    plan = crud.get_plan_or_404(db, plan_id)
+    plan = crud.get_plan_or_404(db, plan_id, user_id=current_user.id)
 
     text, _ = await _resolve_syllabus_text(file, raw_text, settings)
     ai_res = _run_ai_extraction(
@@ -150,7 +153,7 @@ async def extract_syllabus_for_plan_endpoint(
         for idx, t in enumerate(ai_res.extraction.topics)
     ]
     crud.replace_topics(db, plan, topic_creates)
-    recalculate_global_schedule(db)
+    recalculate_global_schedule(db, user_id=current_user.id)
 
-    refreshed = crud.get_plan_or_404(db, plan_id)
+    refreshed = crud.get_plan_or_404(db, plan_id, user_id=current_user.id)
     return crud.to_plan_detail(refreshed)

@@ -61,10 +61,30 @@ def _enum(e: type[enum.Enum], name: str) -> Enum:
     return Enum(e, name=name, native_enum=False, values_callable=lambda x: [m.value for m in x])
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    settings: Mapped[UserSettings | None] = relationship(
+        back_populates="user", uselist=False, cascade="all, delete-orphan", passive_deletes=True
+    )
+    plans: Mapped[list[StudyPlan]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
 class UserSettings(Base):
     __tablename__ = "user_settings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=True, unique=True, index=True
+    )
     daily_study_minutes: Mapped[int] = mapped_column(Integer, default=240, nullable=False)
     preferred_study_days: Mapped[list[str]] = mapped_column(
         JSON, default=lambda: list(DEFAULT_STUDY_DAYS), nullable=False
@@ -74,11 +94,16 @@ class UserSettings(Base):
         DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
 
+    user: Mapped[User | None] = relationship(back_populates="settings")
+
 
 class StudyPlan(Base):
     __tablename__ = "study_plans"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     subject_name: Mapped[str] = mapped_column(String(200), nullable=False)
     exam_date: Mapped[date] = mapped_column(Date, nullable=False)
     syllabus_raw_text: Mapped[str] = mapped_column(Text, default="", nullable=False)
@@ -91,6 +116,7 @@ class StudyPlan(Base):
         DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
 
+    user: Mapped[User | None] = relationship(back_populates="plans")
     topics: Mapped[list[Topic]] = relationship(
         back_populates="plan",
         cascade="all, delete-orphan",

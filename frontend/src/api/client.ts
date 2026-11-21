@@ -1,4 +1,6 @@
 import type {
+  AuthResponse,
+  AuthUser,
   HealthResponse,
   PlanCreate,
   PlanDetail,
@@ -24,9 +26,32 @@ export class ApiError extends Error {
 }
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+const TOKEN_KEY = "sb_auth_token";
+
+export function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setAuthToken(token: string | null): void {
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // ignore storage errors
+  }
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, init);
+  const token = getAuthToken();
+  const headers = new Headers(init?.headers);
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  const res = await fetch(`${API_BASE}${path}`, { ...init, headers });
   if (!res.ok) {
     let detail = `Request failed (${res.status})`;
     try {
@@ -49,6 +74,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   getHealth: () => request<HealthResponse>("/api/health"),
+
+  register: (payload: { name: string; email: string; password: string }) =>
+    request<AuthResponse>("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+
+  login: (payload: { email: string; password: string }) =>
+    request<AuthResponse>("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+
+  me: () => request<AuthUser>("/api/auth/me"),
 
   getSettings: () => request<UserSettings>("/api/settings"),
 

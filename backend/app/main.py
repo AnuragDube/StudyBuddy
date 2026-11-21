@@ -20,6 +20,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import (
+    auth,
     health,
     plans,
     schedule,
@@ -84,6 +85,7 @@ def create_app() -> FastAPI:
         return response
 
     app.include_router(health.router, prefix=settings.api_prefix)
+    app.include_router(auth.router, prefix=settings.api_prefix)
     app.include_router(settings_routes.router, prefix=settings.api_prefix)
     app.include_router(plans.router, prefix=settings.api_prefix)
     app.include_router(syllabus.router, prefix=settings.api_prefix)

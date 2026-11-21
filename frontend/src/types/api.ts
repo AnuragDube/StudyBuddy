@@ -3,6 +3,19 @@ export type PlanStatus = "active" | "completed" | "archived";
 export type SessionStatus = "pending" | "completed" | "missed";
 export type WeekdayShort = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
 
+export interface AuthUser {
+  id: number;
+  name: string;
+  email: string;
+  created_at: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: AuthUser;
+}
+
 export interface HealthResponse {
   status: string;
   app: string;

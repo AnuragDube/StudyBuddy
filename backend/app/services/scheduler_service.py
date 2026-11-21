@@ -271,55 +271,72 @@ def compute_schedule(
 def recalculate_global_schedule(
     db: Session,
     *,
+    user_id: int | None = None,
     start_date: date | None = None,
 ) -> ScheduleReport:
-    """Rebuild all pending study sessions across active plans using shared capacity.
+    """Rebuild all pending study sessions across a user's active plans using shared capacity.
 
     Preserves historical ``completed`` and ``missed`` sessions. Any unfinished
     minutes from ``missed`` sessions are naturally folded back into the topic's
     remaining workload and rescheduled within shared capacity.
     """
     today = start_date or date.today()
-    settings = get_or_create_settings(db)
+    settings = get_or_create_settings(db, user_id=user_id)
 
-    active_plans = list(
-        db.scalars(
-            select(StudyPlan)
-            .where(StudyPlan.status == PlanStatus.active)
-            .options(selectinload(StudyPlan.topics))
-            .order_by(StudyPlan.exam_date.asc(), StudyPlan.id.asc())
-        ).all()
+    plans_stmt = (
+        select(StudyPlan)
+        .where(StudyPlan.status == PlanStatus.active)
+        .options(selectinload(StudyPlan.topics))
+        .order_by(StudyPlan.exam_date.asc(), StudyPlan.id.asc())
     )
+    if user_id is not None:
+        plans_stmt = plans_stmt.where(StudyPlan.user_id == user_id)
+    active_plans = list(db.scalars(plans_stmt).all())
 
-    # Clear all existing pending sessions so archived/deleted plans don't linger.
-    db.execute(delete(StudySession).where(StudySession.status == SessionStatus.pending))
+    # Clear existing pending sessions only for this user's plans.
+    if user_id is not None:
+        user_plan_ids = select(StudyPlan.id).where(StudyPlan.user_id == user_id)
+        db.execute(
+            delete(StudySession).where(
+                StudySession.status == SessionStatus.pending,
+                StudySession.plan_id.in_(user_plan_ids),
+            )
+        )
+    else:
+        db.execute(delete(StudySession).where(StudySession.status == SessionStatus.pending))
 
     # Sum completed minutes per topic so we only schedule what remains.
-    completed_by_topic: dict[int, int] = dict(
-        db.execute(
-            select(
-                StudySession.topic_id,
-                func.coalesce(func.sum(StudySession.duration_minutes), 0),
-            )
-            .where(StudySession.status == SessionStatus.completed)
-            .group_by(StudySession.topic_id)
-        ).all()
+    completed_topic_stmt = (
+        select(
+            StudySession.topic_id,
+            func.coalesce(func.sum(StudySession.duration_minutes), 0),
+        )
+        .where(StudySession.status == SessionStatus.completed)
+        .group_by(StudySession.topic_id)
     )
+    if user_id is not None:
+        completed_topic_stmt = completed_topic_stmt.where(
+            StudySession.plan_id.in_(select(StudyPlan.id).where(StudyPlan.user_id == user_id))
+        )
+    completed_by_topic: dict[int, int] = dict(db.execute(completed_topic_stmt).all())
 
     # Account for completed sessions on today or future dates so daily cap is respected.
-    completed_by_date: dict[date, int] = dict(
-        db.execute(
-            select(
-                StudySession.scheduled_date,
-                func.coalesce(func.sum(StudySession.duration_minutes), 0),
-            )
-            .where(
-                StudySession.status == SessionStatus.completed,
-                StudySession.scheduled_date >= today,
-            )
-            .group_by(StudySession.scheduled_date)
-        ).all()
+    completed_date_stmt = (
+        select(
+            StudySession.scheduled_date,
+            func.coalesce(func.sum(StudySession.duration_minutes), 0),
+        )
+        .where(
+            StudySession.status == SessionStatus.completed,
+            StudySession.scheduled_date >= today,
+        )
+        .group_by(StudySession.scheduled_date)
     )
+    if user_id is not None:
+        completed_date_stmt = completed_date_stmt.where(
+            StudySession.plan_id.in_(select(StudyPlan.id).where(StudyPlan.user_id == user_id))
+        )
+    completed_by_date: dict[date, int] = dict(db.execute(completed_date_stmt).all())
 
     tasks: list[TopicTask] = []
     for plan in active_plans:

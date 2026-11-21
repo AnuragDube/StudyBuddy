@@ -6,14 +6,18 @@ import {
   CheckCircle2,
   Clock3,
   GraduationCap,
+  LoaderCircle,
+  LogOut,
   SlidersHorizontal,
   Sparkles,
 } from "lucide-react";
-import { api, ApiError } from "./api/client";
+import { api, ApiError, getAuthToken, setAuthToken } from "./api/client";
+import { AuthView } from "./components/AuthView";
 import { CapacityCard } from "./components/CapacityCard";
 import { ScheduleView } from "./components/ScheduleView";
 import { SubjectsView } from "./components/SubjectsView";
 import type {
+  AuthUser,
   Difficulty,
   HealthResponse,
   PlanDetail,
@@ -27,6 +31,8 @@ import type {
 type TabId = "schedule" | "subjects" | "capacity";
 
 export const App: React.FC = () => {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>("schedule");
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [settings, setSettings] = useState<UserSettings | null>(null);
@@ -36,6 +42,17 @@ export const App: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+
+  const handleLogout = useCallback(() => {
+    setAuthToken(null);
+    setUser(null);
+    setSettings(null);
+    setPlans([]);
+    setSelectedPlan(null);
+    setSchedule(null);
+    setError("");
+    setNotice("");
+  }, []);
 
   const refreshAll = useCallback(async (keepPlanId?: number) => {
     const [h, s, p, sc] = await Promise.all([
@@ -61,7 +78,32 @@ export const App: React.FC = () => {
   }, [selectedPlan?.id]);
 
   useEffect(() => {
+    const token = getAuthToken();
+    if (!token) {
+      setAuthChecking(false);
+      return;
+    }
+    api
+      .me()
+      .then((u) => {
+        setUser(u);
+      })
+      .catch(() => {
+        setAuthToken(null);
+        setUser(null);
+      })
+      .finally(() => {
+        setAuthChecking(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
     refreshAll().catch((err) => {
+      if (err instanceof ApiError && err.status === 401) {
+        handleLogout();
+        return;
+      }
       setError(
         err instanceof Error
           ? `Could not connect to FastAPI backend: ${err.message}`
@@ -69,7 +111,7 @@ export const App: React.FC = () => {
       );
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.id]);
 
   async function runAction(fn: () => Promise<void>, successMessage?: string) {
     setError("");
@@ -179,6 +221,28 @@ export const App: React.FC = () => {
     }, `Session marked ${status} and schedule updated.`);
   }
 
+  if (authChecking) {
+    return (
+      <div className="auth-shell">
+        <div className="auth-loading">
+          <LoaderCircle size={24} className="spin" />
+          <span>Loading Study Buddy…</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthView onAuthenticated={(u) => setUser(u)} />;
+  }
+
+  const initials = user.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "SB";
+
   const activePlansCount = plans.filter((p) => p.status === "active").length;
   const totalSessions = schedule?.sessions.length ?? 0;
   const completedSessions =
@@ -266,7 +330,18 @@ export const App: React.FC = () => {
                   : "Loading…"}
               </span>
             </div>
-            <div className="avatar">SB</div>
+            <div className="user-pill" title={user.email}>
+              <div className="avatar">{initials}</div>
+              <span className="user-name">{user.name}</span>
+            </div>
+            <button
+              type="button"
+              className="mini-btn"
+              onClick={handleLogout}
+              title="Sign out"
+            >
+              <LogOut size={13} /> Sign Out
+            </button>
           </div>
         </header>
 

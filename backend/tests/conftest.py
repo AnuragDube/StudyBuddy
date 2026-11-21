@@ -63,6 +63,25 @@ def app(session_factory):
 
 
 @pytest.fixture()
-def client(app) -> Generator[TestClient, None, None]:
+def anon_client(app) -> Generator[TestClient, None, None]:
+    """Unauthenticated TestClient for testing auth & 401 behavior."""
     with TestClient(app) as test_client:
+        yield test_client
+
+
+@pytest.fixture()
+def client(app) -> Generator[TestClient, None, None]:
+    """Authenticated TestClient with a freshly registered test student."""
+    with TestClient(app) as test_client:
+        resp = test_client.post(
+            "/api/auth/register",
+            json={
+                "name": "Test Student",
+                "email": "student@example.com",
+                "password": "password123",
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        token = resp.json()["access_token"]
+        test_client.headers.update({"Authorization": f"Bearer {token}"})
         yield test_client

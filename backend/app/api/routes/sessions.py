@@ -7,8 +7,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.routes.schedule import build_schedule_response, serialize_session
+from app.core.security import get_current_user
 from app.db.database import get_db
-from app.db.models import SessionStatus, StudySession, Topic, utcnow
+from app.db.models import SessionStatus, StudyPlan, StudySession, Topic, User, utcnow
 from app.schemas.schedule import SessionStatusUpdate, SessionUpdateResponse
 from app.services.scheduler_service import recalculate_global_schedule
 
@@ -23,11 +24,13 @@ router = APIRouter(prefix="/sessions", tags=["sessions"])
 def update_session_status_endpoint(
     session_id: int,
     payload: SessionStatusUpdate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> SessionUpdateResponse:
     session = db.scalar(
         select(StudySession)
-        .where(StudySession.id == session_id)
+        .join(StudyPlan, StudySession.plan_id == StudyPlan.id)
+        .where(StudySession.id == session_id, StudyPlan.user_id == current_user.id)
         .options(selectinload(StudySession.plan), selectinload(StudySession.topic))
     )
     if session is None:
@@ -59,8 +62,8 @@ def update_session_status_endpoint(
     serialized = serialize_session(session)
     topic_completed = topic.is_completed
 
-    report = recalculate_global_schedule(db)
-    schedule_read = build_schedule_response(db, report)
+    report = recalculate_global_schedule(db, user_id=current_user.id)
+    schedule_read = build_schedule_response(db, report, user_id=current_user.id)
 
     return SessionUpdateResponse(
         session=serialized,

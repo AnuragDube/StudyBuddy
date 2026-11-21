@@ -8,8 +8,9 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.security import get_current_user
 from app.db.database import get_db
-from app.db.models import SessionStatus, StudySession
+from app.db.models import SessionStatus, StudyPlan, StudySession, User
 from app.schemas.schedule import (
     PlanFeasibilityRead,
     ScheduleReportRead,
@@ -41,6 +42,7 @@ def serialize_session(session: StudySession) -> StudySessionRead:
 def load_sessions(
     db: Session,
     *,
+    user_id: int | None = None,
     plan_id: int | None = None,
     status: SessionStatus | None = None,
     from_date: date | None = None,
@@ -48,6 +50,7 @@ def load_sessions(
 ) -> list[StudySessionRead]:
     stmt = (
         select(StudySession)
+        .join(StudyPlan, StudySession.plan_id == StudyPlan.id)
         .options(selectinload(StudySession.plan), selectinload(StudySession.topic))
         .order_by(
             StudySession.scheduled_date.asc(),
@@ -55,6 +58,8 @@ def load_sessions(
             StudySession.id.asc(),
         )
     )
+    if user_id is not None:
+        stmt = stmt.where(StudyPlan.user_id == user_id)
     if plan_id is not None:
         stmt = stmt.where(StudySession.plan_id == plan_id)
     if status is not None:
@@ -72,6 +77,7 @@ def build_schedule_response(
     db: Session,
     report: ScheduleReport,
     *,
+    user_id: int | None = None,
     plan_id: int | None = None,
     status: SessionStatus | None = None,
     from_date: date | None = None,
@@ -79,6 +85,7 @@ def build_schedule_response(
 ) -> ScheduleReportRead:
     sessions = load_sessions(
         db,
+        user_id=user_id,
         plan_id=plan_id,
         status=status,
         from_date=from_date,
@@ -114,12 +121,14 @@ def get_schedule_endpoint(
     status: SessionStatus | None = Query(None, description="Filter sessions by status"),
     from_date: date | None = Query(None, description="Inclusive start date filter"),
     to_date: date | None = Query(None, description="Inclusive end date filter"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ScheduleReportRead:
-    report = recalculate_global_schedule(db)
+    report = recalculate_global_schedule(db, user_id=current_user.id)
     return build_schedule_response(
         db,
         report,
+        user_id=current_user.id,
         plan_id=plan_id,
         status=status,
         from_date=from_date,
@@ -134,7 +143,8 @@ def get_schedule_endpoint(
 )
 def recalculate_schedule_endpoint(
     start_date: date | None = Query(None, description="Optional override for schedule start date"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ScheduleReportRead:
-    report = recalculate_global_schedule(db, start_date=start_date)
-    return build_schedule_response(db, report)
+    report = recalculate_global_schedule(db, user_id=current_user.id, start_date=start_date)
+    return build_schedule_response(db, report, user_id=current_user.id)
