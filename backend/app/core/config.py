@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     groq_api_key: str | None = None
     groq_model: str = "openai/gpt-oss-20b"
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-2.5-flash-lite"
+    gemini_model: str = "gemini-3.5-flash-lite"
     ai_timeout_seconds: float = 60.0
     ai_max_syllabus_chars: int = 30_000
 

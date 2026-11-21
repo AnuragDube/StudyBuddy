@@ -1,7 +1,7 @@
 """Reproducible LLM benchmarking harness for Study Buddy research evaluation.
 
 Compares configured LLM providers (e.g., Groq ``openai/gpt-oss-20b`` vs.
-Google Gemini ``gemini-2.5-flash-lite``) on:
+Google Gemini ``gemini-3.5-flash-lite``) on:
 1. Strict JSON schema adherence (%)
 2. Syllabus concept recall / coverage (%)
 3. End-to-end latency (ms) and token usage

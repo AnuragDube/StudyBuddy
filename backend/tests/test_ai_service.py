@@ -180,12 +180,12 @@ def test_gemini_provider_extracts_structured_json() -> None:
     fake_client.models.generate_content.return_value = fake_response
 
     provider = GeminiProvider(
-        api_key="gem_test", model="gemini-2.5-flash-lite", client=fake_client
+        api_key="gem_test", model="gemini-3.5-flash-lite", client=fake_client
     )
     result = provider.extract("Unit 1: Asymptotic Analysis...")
 
     assert result.provider == "gemini"
-    assert result.model == "gemini-2.5-flash-lite"
+    assert result.model == "gemini-3.5-flash-lite"
     assert len(result.extraction.topics) == 2
     assert result.total_tokens == 400
 

@@ -13,7 +13,7 @@ services:
       - key: GROQ_MODEL
         value: openai/gpt-oss-20b
       - key: GEMINI_MODEL
-        value: gemini-2.5-flash-lite
+        value: gemini-3.5-flash-lite
       - key: AUTO_MIGRATE
         value: "true"
       - key: GROQ_API_KEY

@@ -7,7 +7,7 @@ deterministic scheduling math.
 Supported providers:
 * ``groq``   – Primary provider (default ``openai/gpt-oss-20b``) using strict
   JSON Schema structured output.
-* ``gemini`` – Secondary/baseline provider (default ``gemini-2.5-flash-lite``)
+* ``gemini`` – Secondary/baseline provider (default ``gemini-3.5-flash-lite``)
   via the official ``google-genai`` SDK, used for automatic fallback and
   research benchmarking.
 """
@@ -220,7 +220,7 @@ class GeminiProvider(BaseLLMProvider):
     def __init__(
         self,
         api_key: str,
-        model: str = "gemini-2.5-flash-lite",
+        model: str = "gemini-3.5-flash-lite",
         timeout_seconds: float = 60.0,
         client: Any | None = None,
     ) -> None:

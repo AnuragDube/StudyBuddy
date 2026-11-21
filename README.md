@@ -150,7 +150,7 @@ All **54 tests** run against an isolated in-memory SQLite database with mocked L
 
 ## Research Paper LLM Benchmarking Harness
 
-To compare LLM providers (e.g., Groq `openai/gpt-oss-20b` vs. Google Gemini `gemini-2.5-flash-lite`) on **strict schema adherence**, **concept recall**, **latency**, **token usage**, and **downstream scheduler constraint compliance**:
+To compare LLM providers (e.g., Groq `openai/gpt-oss-20b` vs. Google Gemini `gemini-3.5-flash-lite`) on **strict schema adherence**, **concept recall**, **latency**, **token usage**, and **downstream scheduler constraint compliance**:
 
 ```bash
 cd backend
