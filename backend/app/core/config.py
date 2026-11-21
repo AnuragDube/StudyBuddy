@@ -7,11 +7,12 @@ reads ``os.environ`` directly. Values are validated by pydantic-settings.
 from __future__ import annotations
 
 from functools import lru_cache
+import json
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 
@@ -36,7 +37,7 @@ class Settings(BaseSettings):
 
     # --- HTTP ---
     api_prefix: str = "/api"
-    cors_origins: list[str] = Field(
+    cors_origins: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
     )
 
@@ -60,7 +61,10 @@ class Settings(BaseSettings):
     @classmethod
     def _split_origins(cls, value: object) -> object:
         """Allow ``CORS_ORIGINS=a,b`` in addition to a JSON list."""
-        if isinstance(value, str) and not value.strip().startswith("["):
+        if isinstance(value, str):
+            stripped = value.strip()
+            if stripped.startswith("["):
+                return json.loads(stripped)
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
 
