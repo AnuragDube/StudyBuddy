@@ -1,7 +1,37 @@
-node_modules/
-dist/
+# --- Secrets (NEVER commit) ---
 .env
 .env.local
+.env.*.local
+!.env.example
+
+# --- Node / frontend ---
+node_modules/
+dist/
+*.tsbuildinfo
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# --- Databases ---
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Benchmark outputs ---
+backend/benchmarks/results/
+
+# --- OS / editor ---
 .DS_Store
+Thumbs.db
 *.log
 .vscode/
+.idea/
