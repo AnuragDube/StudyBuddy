@@ -91,7 +91,8 @@ def create_app() -> FastAPI:
     app.include_router(sessions.router, prefix=settings.api_prefix)
 
     # Serve built React SPA if frontend/dist exists (e.g. single-container Render/Docker deploy).
-    frontend_dist = Path(__file__).resolve().parents[3] / "frontend" / "dist"
+    # __file__ = <repo>/backend/app/main.py -> parents[2] = <repo>
+    frontend_dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
     if frontend_dist.is_dir() and (frontend_dist / "index.html").is_file():
         assets_dir = frontend_dist / "assets"
         if assets_dir.is_dir():
