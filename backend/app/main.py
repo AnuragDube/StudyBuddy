@@ -12,9 +12,12 @@ from __future__ import annotations
 import time
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import (
     health,
@@ -86,6 +89,18 @@ def create_app() -> FastAPI:
     app.include_router(syllabus.router, prefix=settings.api_prefix)
     app.include_router(schedule.router, prefix=settings.api_prefix)
     app.include_router(sessions.router, prefix=settings.api_prefix)
+
+    # Serve built React SPA if frontend/dist exists (e.g. single-container Render/Docker deploy).
+    frontend_dist = Path(__file__).resolve().parents[3] / "frontend" / "dist"
+    if frontend_dist.is_dir() and (frontend_dist / "index.html").is_file():
+        assets_dir = frontend_dist / "assets"
+        if assets_dir.is_dir():
+            app.mount("/assets", StaticFiles(directory=assets_dir), name="frontend-assets")
+
+        @app.get("/", include_in_schema=False)
+        async def serve_spa_root():
+            return FileResponse(frontend_dist / "index.html")
+
     return app
 
 

@@ -23,8 +23,10 @@ export class ApiError extends Error {
   }
 }
 
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, init);
+  const res = await fetch(`${API_BASE}${path}`, init);
   if (!res.ok) {
     let detail = `Request failed (${res.status})`;
     try {

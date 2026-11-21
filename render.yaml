@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: study-buddy-planner
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: AI_PROVIDER
+        value: groq
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-20b
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash-lite
+      - key: AUTO_MIGRATE
+        value: "true"
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
