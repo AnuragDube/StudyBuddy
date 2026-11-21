@@ -42,6 +42,7 @@ class Settings(BaseSettings):
 
     # --- Database ---
     database_url: str = f"sqlite:///{(BACKEND_DIR / 'study_buddy.db').as_posix()}"
+    auto_migrate: bool = True  # run `alembic upgrade head` on startup
 
     # --- AI ---
     ai_provider: Literal["groq", "gemini"] = "groq"

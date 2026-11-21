@@ -19,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import health
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
+from app.db.init_db import run_migrations
 
 logger = get_logger("app")
 
@@ -30,6 +31,8 @@ async def lifespan(app: FastAPI):
         "Starting %s", settings.app_name,
         extra={"version": settings.app_version, "environment": settings.environment},
     )
+    if settings.auto_migrate:
+        run_migrations(settings.database_url)
     yield
     logger.info("Shutting down %s", settings.app_name)
 
