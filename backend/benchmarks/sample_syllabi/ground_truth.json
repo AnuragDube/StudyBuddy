@@ -1,0 +1,47 @@
+{
+  "nlp_syllabus.txt": {
+    "subject": "Natural Language Processing",
+    "expected_concepts": [
+      "morphology",
+      "tokenization",
+      "n-gram",
+      "pos",
+      "hmm",
+      "cfg",
+      "parsing",
+      "wordnet",
+      "disambiguation",
+      "transformers"
+    ]
+  },
+  "os_syllabus.txt": {
+    "subject": "Operating Systems",
+    "expected_concepts": [
+      "process",
+      "thread",
+      "scheduling",
+      "semaphore",
+      "deadlock",
+      "paging",
+      "virtual memory",
+      "lru",
+      "disk",
+      "file system"
+    ]
+  },
+  "dsa_syllabus.txt": {
+    "subject": "Data Structures and Algorithms",
+    "expected_concepts": [
+      "asymptotic",
+      "linked list",
+      "avl",
+      "heap",
+      "hash",
+      "bfs",
+      "dijkstra",
+      "spanning tree",
+      "dynamic programming",
+      "np-completeness"
+    ]
+  }
+}

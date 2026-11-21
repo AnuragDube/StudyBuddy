@@ -1,0 +1,5 @@
+Natural Language Processing — CS401
+Unit I — Word Level Analysis: Morphology, stemming, lemmatization, tokenization, regular expressions, finite state transducers, n-gram language models.
+Unit II — Syntactic Analysis: Part-of-Speech tagging, Hidden Markov Models, Conditional Random Fields, Context-Free Grammars, CKY and Earley parsing, PCFG.
+Unit III — Semantic Analysis: Lexical semantics, WordNet, Word Sense Disambiguation, distributional word embeddings.
+Unit IV — Deep Learning for NLP: Recurrent Neural Networks, LSTMs, Attention mechanism, Transformers, Sentiment Analysis.

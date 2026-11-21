@@ -1,0 +1,5 @@
+Data Structures and Algorithms — CS201
+Unit I — Complexity and Linear Structures: Asymptotic analysis, Big-O notation, recurrence relations, Master theorem, arrays, linked lists, stacks, queues.
+Unit II — Trees and Hashing: Binary search trees, AVL trees, Red-Black trees, B-Trees, heaps, priority queues, hash tables and collision resolution.
+Unit III — Graph Algorithms: BFS, DFS, topological sort, Dijkstra's shortest path, Bellman-Ford, Kruskal and Prim minimum spanning trees.
+Unit IV — Algorithm Design Paradigms: Divide and conquer, greedy algorithms, dynamic programming, backtracking, NP-completeness.

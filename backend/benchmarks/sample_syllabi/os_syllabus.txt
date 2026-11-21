@@ -1,0 +1,5 @@
+Operating Systems — CS302
+Unit I — Processes and Threads: Process states, PCB, context switching, multithreading models, inter-process communication.
+Unit II — CPU Scheduling and Synchronization: FCFS, SJF, Round Robin, priority scheduling, critical section problem, semaphores, monitors, deadlocks and Banker's algorithm.
+Unit III — Memory Management: Paging, segmentation, virtual memory, demand paging, page replacement algorithms (LRU, Optimal, FIFO), thrashing.
+Unit IV — Storage and File Systems: Disk scheduling, file allocation methods, free-space management, journaling file systems.
