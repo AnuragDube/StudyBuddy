@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.db import crud
 from app.db.database import get_db
 from app.schemas.settings import SettingsRead, SettingsUpdate
+from app.services.scheduler_service import recalculate_global_schedule
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -19,4 +20,6 @@ def get_settings_endpoint(db: Session = Depends(get_db)) -> SettingsRead:
 
 @router.put("", response_model=SettingsRead, summary="Update shared study capacity settings")
 def update_settings_endpoint(payload: SettingsUpdate, db: Session = Depends(get_db)) -> SettingsRead:
-    return SettingsRead.model_validate(crud.update_settings(db, payload))
+    updated = crud.update_settings(db, payload)
+    recalculate_global_schedule(db)
+    return SettingsRead.model_validate(updated)

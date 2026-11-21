@@ -17,6 +17,7 @@ from app.schemas.plan import (
     TopicRead,
     TopicUpdate,
 )
+from app.services.scheduler_service import recalculate_global_schedule
 
 router = APIRouter(prefix="/plans", tags=["plans"])
 
@@ -32,7 +33,9 @@ def list_plans(
 @router.post("", response_model=PlanDetail, status_code=status.HTTP_201_CREATED,
              summary="Create a subject plan (optionally with topics)")
 def create_plan(payload: PlanCreate, db: Session = Depends(get_db)) -> PlanDetail:
-    return crud.to_plan_detail(crud.create_plan(db, payload))
+    plan = crud.create_plan(db, payload)
+    recalculate_global_schedule(db)
+    return crud.to_plan_detail(crud.get_plan_or_404(db, plan.id))
 
 
 @router.get("/{plan_id}", response_model=PlanDetail, summary="Get a subject plan with topics")
@@ -44,12 +47,15 @@ def get_plan(plan_id: int, db: Session = Depends(get_db)) -> PlanDetail:
               summary="Update a subject plan (e.g. rename, change exam date, archive)")
 def update_plan(plan_id: int, payload: PlanUpdate, db: Session = Depends(get_db)) -> PlanDetail:
     plan = crud.get_plan_or_404(db, plan_id)
-    return crud.to_plan_detail(crud.update_plan(db, plan, payload))
+    updated = crud.update_plan(db, plan, payload)
+    recalculate_global_schedule(db)
+    return crud.to_plan_detail(crud.get_plan_or_404(db, updated.id))
 
 
 @router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a subject plan")
 def delete_plan(plan_id: int, db: Session = Depends(get_db)) -> Response:
     crud.delete_plan(db, crud.get_plan_or_404(db, plan_id))
+    recalculate_global_schedule(db)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -58,14 +64,18 @@ def delete_plan(plan_id: int, db: Session = Depends(get_db)) -> Response:
             summary="Replace all topics of a plan (e.g. after reviewing AI extraction)")
 def replace_topics(plan_id: int, payload: list[TopicCreate], db: Session = Depends(get_db)) -> PlanDetail:
     plan = crud.get_plan_or_404(db, plan_id)
-    return crud.to_plan_detail(crud.replace_topics(db, plan, payload))
+    crud.replace_topics(db, plan, payload)
+    recalculate_global_schedule(db)
+    return crud.to_plan_detail(crud.get_plan_or_404(db, plan_id))
 
 
 @router.post("/{plan_id}/topics", response_model=TopicRead, status_code=status.HTTP_201_CREATED,
              summary="Add a topic to a plan")
 def add_topic(plan_id: int, payload: TopicCreate, db: Session = Depends(get_db)) -> TopicRead:
     plan = crud.get_plan_or_404(db, plan_id)
-    return crud.to_topic_read(crud.add_topic(db, plan, payload))
+    topic = crud.add_topic(db, plan, payload)
+    recalculate_global_schedule(db)
+    return crud.to_topic_read(topic)
 
 
 @router.patch("/{plan_id}/topics/{topic_id}", response_model=TopicRead, summary="Update a topic")
@@ -73,7 +83,9 @@ def update_topic(plan_id: int, topic_id: int, payload: TopicUpdate,
                  db: Session = Depends(get_db)) -> TopicRead:
     plan = crud.get_plan_or_404(db, plan_id)
     topic = crud.get_topic_or_404(db, plan, topic_id)
-    return crud.to_topic_read(crud.update_topic(db, topic, payload))
+    updated = crud.update_topic(db, topic, payload)
+    recalculate_global_schedule(db)
+    return crud.to_topic_read(updated)
 
 
 @router.delete("/{plan_id}/topics/{topic_id}", status_code=status.HTTP_204_NO_CONTENT,
@@ -81,4 +93,5 @@ def update_topic(plan_id: int, topic_id: int, payload: TopicUpdate,
 def delete_topic(plan_id: int, topic_id: int, db: Session = Depends(get_db)) -> Response:
     plan = crud.get_plan_or_404(db, plan_id)
     crud.delete_topic(db, crud.get_topic_or_404(db, plan, topic_id))
+    recalculate_global_schedule(db)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
