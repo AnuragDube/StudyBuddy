@@ -1,0 +1,23 @@
+# --- Web framework ---
+fastapi>=0.118
+uvicorn[standard]>=0.32
+python-multipart>=0.0.18
+
+# --- Validation & settings ---
+pydantic>=2.12
+pydantic-settings>=2.6
+
+# --- Database ---
+sqlalchemy>=2.0.43
+alembic>=1.14
+
+# --- PDF extraction ---
+pymupdf>=1.26
+
+# --- AI providers ---
+groq>=0.30
+google-genai>=1.30
+
+# --- Testing ---
+pytest>=8.3
+httpx>=0.28
