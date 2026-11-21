@@ -16,7 +16,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import health
+from app.api.routes import health, plans, settings as settings_routes
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
 from app.db.init_db import run_migrations
@@ -74,6 +74,8 @@ def create_app() -> FastAPI:
         return response
 
     app.include_router(health.router, prefix=settings.api_prefix)
+    app.include_router(settings_routes.router, prefix=settings.api_prefix)
+    app.include_router(plans.router, prefix=settings.api_prefix)
     return app
 
 
