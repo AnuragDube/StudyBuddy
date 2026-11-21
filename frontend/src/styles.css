@@ -43,3 +43,10 @@
 .session-tags{display:flex;gap:6px;margin-top:6px;align-items:center}
 .session-actions{display:flex;gap:6px;flex-shrink:0;align-items:center}
 @media(max-width:800px){.inline-topic-form{grid-template-columns:1fr 1fr}.session-row{flex-direction:column}.session-actions{width:100%}}
+
+.subject-filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid #f0f0f5}
+.filter-pill{border:1px solid #e5e6ef;background:#fff;color:#5b6075;border-radius:999px;padding:7px 12px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:7px;transition:all .15s}
+.filter-pill:hover{border-color:#c6bff8;background:#faf9ff}
+.filter-pill.active{border-color:var(--purple);background:#f1efff;color:var(--purple)}
+.filter-count{font-size:10px;background:#eef0f6;color:#6c7288;padding:1px 6px;border-radius:999px}
+.filter-pill.active .filter-count{background:#e2dcff;color:var(--purple)}

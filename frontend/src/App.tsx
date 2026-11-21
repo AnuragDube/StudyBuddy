@@ -338,6 +338,7 @@ export const App: React.FC = () => {
             {activeTab === "schedule" && (
               <ScheduleView
                 schedule={schedule}
+                plans={plans}
                 busy={busy}
                 onRecalculate={handleRecalculate}
                 onUpdateSession={handleUpdateSession}

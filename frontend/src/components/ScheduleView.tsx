@@ -9,7 +9,12 @@ import {
   RotateCcw,
   XCircle,
 } from "lucide-react";
-import type { ScheduleReport, SessionStatus, StudySession } from "../types/api";
+import type {
+  PlanSummary,
+  ScheduleReport,
+  SessionStatus,
+  StudySession,
+} from "../types/api";
 
 function formatDayLabel(iso: string): string {
   return new Date(`${iso}T12:00:00`).toLocaleDateString("en-IN", {
@@ -30,6 +35,7 @@ function formatOffsetRange(startOffset: number, duration: number): string {
 
 interface ScheduleViewProps {
   schedule: ScheduleReport | null;
+  plans: PlanSummary[];
   busy: boolean;
   onRecalculate: () => Promise<void>;
   onUpdateSession: (sessionId: number, status: SessionStatus) => Promise<void>;
@@ -37,21 +43,39 @@ interface ScheduleViewProps {
 
 export const ScheduleView: React.FC<ScheduleViewProps> = ({
   schedule,
+  plans,
   busy,
   onRecalculate,
   onUpdateSession,
 }) => {
+  const [selectedPlanId, setSelectedPlanId] = useState<number | "all">("all");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  const activePlans = useMemo(
+    () => plans.filter((p) => p.status === "active"),
+    [plans]
+  );
+
+  const filteredSessions = useMemo(() => {
+    const all = schedule?.sessions ?? [];
+    if (selectedPlanId === "all") return all;
+    return all.filter((s) => s.plan_id === selectedPlanId);
+  }, [schedule, selectedPlanId]);
+
+  const activePlanFeasibility = useMemo(() => {
+    if (selectedPlanId === "all" || !schedule) return null;
+    return schedule.per_plan.find((p) => p.plan_id === selectedPlanId) ?? null;
+  }, [schedule, selectedPlanId]);
 
   const groupedDays = useMemo(() => {
     const map = new Map<string, StudySession[]>();
-    for (const s of schedule?.sessions ?? []) {
+    for (const s of filteredSessions) {
       const list = map.get(s.scheduled_date) ?? [];
       list.push(s);
       map.set(s.scheduled_date, list);
     }
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [schedule]);
+  }, [filteredSessions]);
 
   const activeDay = useMemo(() => {
     if (!groupedDays.length) return null;
@@ -104,13 +128,32 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         <div className="section-heading">
           <div>
             <div className="eyebrow small-eyebrow">
-              <CalendarDays size={12} /> UNIFIED MULTI-SUBJECT TIMETABLE
+              <CalendarDays size={12} />{" "}
+              {activePlanFeasibility
+                ? `SUBJECT SCHEDULE · EXAM ${activePlanFeasibility.exam_date}`
+                : "UNIFIED MULTI-SUBJECT TIMETABLE"}
             </div>
-            <h2>Shared-Capacity Schedule</h2>
+            <h2>
+              {activePlanFeasibility
+                ? activePlanFeasibility.subject_name
+                : "Shared-Capacity Schedule"}
+            </h2>
             <p>
-              Required: {(schedule.total_required_minutes / 60).toFixed(1)}h ·
-              Scheduled: {(schedule.total_scheduled_minutes / 60).toFixed(1)}h ·
-              Available: {(schedule.total_available_minutes / 60).toFixed(1)}h
+              {activePlanFeasibility ? (
+                <>
+                  Required: {(activePlanFeasibility.required_minutes / 60).toFixed(1)}h ·
+                  Scheduled: {(activePlanFeasibility.scheduled_minutes / 60).toFixed(1)}h
+                  {activePlanFeasibility.deficit_minutes > 0
+                    ? ` · Deficit: ${(activePlanFeasibility.deficit_minutes / 60).toFixed(1)}h`
+                    : " · On track"}
+                </>
+              ) : (
+                <>
+                  Required: {(schedule.total_required_minutes / 60).toFixed(1)}h ·
+                  Scheduled: {(schedule.total_scheduled_minutes / 60).toFixed(1)}h ·
+                  Available: {(schedule.total_available_minutes / 60).toFixed(1)}h
+                </>
+              )}
             </p>
           </div>
           <button
@@ -122,6 +165,47 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
             <RefreshCw size={14} className={busy ? "spin" : ""} /> Recalculate
           </button>
         </div>
+
+        {activePlans.length > 0 && (
+          <div className="subject-filter-bar" role="tablist" aria-label="Filter schedule by subject">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedPlanId === "all"}
+              className={`filter-pill ${selectedPlanId === "all" ? "active" : ""}`}
+              onClick={() => {
+                setSelectedPlanId("all");
+                setSelectedDate(null);
+              }}
+            >
+              All Subjects
+              <span className="filter-count">{schedule.sessions.length}</span>
+            </button>
+            {activePlans.map((plan) => {
+              const count = schedule.sessions.filter((s) => s.plan_id === plan.id).length;
+              return (
+                <button
+                  key={plan.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={selectedPlanId === plan.id}
+                  className={`filter-pill ${selectedPlanId === plan.id ? "active" : ""}`}
+                  onClick={() => {
+                    setSelectedPlanId(plan.id);
+                    setSelectedDate(null);
+                  }}
+                >
+                  <span
+                    className="subject-dot"
+                    style={{ backgroundColor: plan.color || "#6d5ce8" }}
+                  />
+                  {plan.subject_name}
+                  <span className="filter-count">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {groupedDays.length === 0 ? (
           <div className="empty-state">
